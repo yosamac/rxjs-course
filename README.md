@@ -25,4 +25,9 @@ Por defecto, el puerto que configuré para este proyecto es el ```8081```, pero 
 Simplemente cambian el puerto por el que ustedes necesiten y listo. (lógicamente graban los cambios antes de ejecutar el ```npm start``` nuevamente)
 
 
-Page to mapping types from JSON: [Quicktype](https://app.quicktype.io)
+### Help pages:
+- [RxJS-dev](https://rxjs.dev): Official documentation
+- [RxMarbles] (https://rxmarbles.com): Marbles diagrams
+- [RxJS-firebase](https://rxjs-dev.firebaseapp.com): RxJS Firebase
+- [LearnRxJS](https://www.learnrxjs.io) RxJS docs and examples of uses cases
+- [Quicktype](https://app.quicktype.io): Mapping from JSON to Typescript Interfaces 
