@@ -1,66 +1,110 @@
+import { concat, from, interval, Subject, timer, merge,of, Observable } from 'rxjs';
+import { tap, map, mergeMap, concatMap, first, filter, take, repeat, delay, share, takeUntil, timeInterval, switchMap } from 'rxjs/operators';
 import { ajax } from 'rxjs/ajax';
-import { switchMap, map, pluck, tap } from 'rxjs/operators';
-import { zip, of } from 'rxjs';
+import { validateLocaleAndSetLanguage } from 'typescript';
 
-/**
- * Ejercicio: 
- *  Realizar 2 peticiones HTTP (ajax) una después de otra.
- *  
- *  La primera debe de obtener el personaje de Star Wars:
- *   Luke Skywalker, llamando el endpoint:   /people/1/
- * 
- *  La segunda petición, debe de ser utilizando el objeto
- *  de la petición anterior, y tomar la especie (species),
- *  que es un arreglo de URLs (array), dentro de ese arreglo, 
- *  tomar la primera posición y realizar la llamada a ese URL,
- *  el cual debería de traer información sobre su especie (Human)
- */
+type Task = {
+    id:number,
+    name: string,
+    frequency: number,
+    requests: string[],
+    isDone: boolean;
+    result?: object 
+    state?: string;
+    iterations: number;
+    startTime?: Date;
+    endTime?: Date;
+    duration?: number;
+    dueTime?: number
+}
 
-// Respuesta esperada:
-// Información sobre los humanos en el universo de Star Wars
-// Ejemplo de la data esperada
-/*
- { name: "Human", classification: "mammal", designation: "sentient", average_height: "180", skin_colors: "caucasian, black, asian, hispanic", …}
-*/
-
-// Respuesta esperada con Mayor dificultad
-// Retornar el siguiente objeto con la información de ambas peticiones
-// Recordando que se disparan una después de la otra, 
-// con el URL que viene dentro del arreglo de 'species'
-
-// Tip: investigar sobre la función zip: 
-//      Que permite combinar observables en un arreglo de valores
-// https://rxjs-dev.firebaseapp.com/api/index/function/zip
-
-// Ejemplo de la data esperada:
-/*
-    especie: {name: "Human", classification: "mammal", designation: "sentient", average_height: "180", skin_colors: "caucasian, black, asian, hispanic", …}
-    personaje: {name: "Luke Skywalker", height: "172", mass: "77", hair_color: "blond", skin_color: "fair", …}
-*/
+const subject = new Subject();
 
 
-(() =>{
+setTimeout(() => {
+    subject.next('')
+}, 60000)
 
-    // No tocar ========================================================
-    const SW_API = 'https://swapi.dev/api';                     
-    const getRequest = ( url: string ) => ajax.getJSON<any>(url);
-    // ==================================================================
+const today  = new Date();
+const polling = [
+    {id: 1, name:'task-1', frequency: 2000,  requests: ['Request-1', 'Request-2', 'Request-3'], isDone: false, iterations:0},//, dueTime: today.setSeconds(today.getSeconds() + 5) },
+    {id: 3, name:'task-3', frequency: 5000, requests: ['Request-7', 'Request-8', 'Request-9'], isDone: false, iterations:0},//, dueTime: today.setSeconds(today.getSeconds() + 2) },
+    {id: 2, name:'task-2', frequency: 10000, requests: ['Request-4', 'Request-5', 'Request-6'], isDone: false, iterations:0}//, dueTime: today.setSeconds(today.getSeconds() + 10) },
+]
 
-    // Realizar el llamado al URL para obtener a Luke Skywalker
-    getRequest(`${SW_API}/people/2`).pipe(
-        // Realizar los operadores respectivos aquí
-        // First response
-        // switchMap(resp => getRequest(resp.species[0]))
-        switchMap(resp => zip(of(resp), getRequest(resp.species[0]))),
-        map(([character, specie]) => ({character, specie}))
+const todo =  polling;
+const doing = [];
+const done = [];
 
-    // NO TOCAR el subscribe ni modificarlo ==
-    ).subscribe( console.log )           // ==
-    // =======================================
-
-    // Resp
+const GITHUB_API_URL = 'https://api.github.com/users';
+const GITHUB_USER = 'yosamac';
 
 
-})();
+const getRequest = ( url: string ) => ajax.getJSON<any>(url);
 
-		
+const getData = (task: Task): Observable<Task> => {
+
+    return getRequest(`${GITHUB_API_URL}/${GITHUB_USER}`).pipe(
+        map(res => {
+            const endTime = new Date()
+            const result = { 
+                ...task,
+                result: res,
+                endTime,
+                duration: endTime.getTime() - task.startTime.getTime(),
+            }
+            return result
+        })
+    );
+}
+
+const tasks$ = from(todo).pipe(
+    tap(val => console.log('tap:', val)),
+)
+
+tasks$.pipe(
+    mergeMap((task) => interval(task.frequency).pipe(
+        switchMap((timesCount) => {
+
+            return getData({
+                ...task, 
+                iterations: timesCount + 1,
+                startTime: new Date()
+            })
+
+        }),
+        //first(),
+        // tap(resp => {
+        //     // task.frequency = resp.endTime.setMilliseconds(resp.frequency as number);
+        //     console.log('tap Polling Before:', polling)
+        //     done.push(task);
+        //     polling.shift();
+        //     console.log('tap Polling After:', polling)
+            
+        // })
+        //timeInterval()
+        // tap(val => console.log('tap: ',val)),  
+        // first(task => task.isDone),
+    )),
+    share(),
+    
+    takeUntil(subject)
+).subscribe({
+    next: (task) => {
+        done.push(task);
+        const newTask: Task = {
+            ...task,
+            endTime: null,
+            startTime: null,
+            result: {},
+            iterations: task.iterations + 1,
+        }
+        newTask.frequency = task.endTime.setSeconds(
+            task.endTime.getSeconds() + (Number(task.frequency)/ 1000)
+        );
+        todo.push(newTask)
+        console.log(polling)
+        console.log('next:', task);
+    },
+    complete:() => console.log('Complete')
+})
