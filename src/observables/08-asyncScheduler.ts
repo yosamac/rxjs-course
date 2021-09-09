@@ -20,4 +20,4 @@ const subs =  asyncScheduler.schedule(function(state) {
 //     subs.unsubscribe()
 // }, 6000)
 
-asyncScheduler.schedule(() => subs.unsubscribe(), 6000);
+asyncScheduler.schedule(() => subs.unsubscribe(), 6000)
