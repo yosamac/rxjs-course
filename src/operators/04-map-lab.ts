@@ -49,3 +49,5 @@ const progress$ = scroll$.pipe(
 progress$.subscribe( percentage => {
     progressBar.style.width = `${percentage}%`  
 })
+
+
